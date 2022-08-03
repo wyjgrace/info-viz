@@ -451,7 +451,7 @@
 
         mouseG
           .append("svgLine:rect") // append a rect to catch mouse movements on canvas
-          .attr("width", width) // can't catch mouse events on a g element
+          .attr("width", width_line + 150 + margin.left + margin.right) // can't catch mouse events on a g element
           .attr("height", height)
           .attr("fill", "none")
           .attr("pointer-events", "all")
@@ -469,7 +469,7 @@
           })
           .on("mousemove", function (e) {
             // mouse moving over canvas
-            var mouse = e.clientX;
+            var mouse = e.clientX - margin.left - 200;
             d3.select(".mouse-line").attr("d", function () {
               var d = "M" + mouse + "," + height;
               d += " " + mouse + "," + 0;
@@ -508,146 +508,6 @@
               return "translate(" + mouse + "," + pos.y_line + ")";
             });
           });
-
-        //// test!!
-
-        // set the dimensions and margins of the graph
-        var margins = { top: 10, right: 30, bottom: 30, left: 60 },
-          widths = 460 - margins.left - margins.right,
-          heights = 400 - margins.top - margins.bottom;
-
-        // append the svg object to the body of the page
-        var svgc = d3
-          .select("#china_graph")
-          .append("svg")
-          .attr("width", widths + margins.left + margins.right)
-          .attr("height", heights + margins.top + margins.bottom)
-          .append("g")
-          .attr(
-            "transform",
-            "translate(" + margins.left + "," + margins.top + ")"
-          );
-
-        // Add X axis --> it is a date format
-        var x = d3
-          .scaleTime()
-          .domain(
-            d3.extent(chinaList, function (d) {
-              return new Date(d.Date_reported);
-            })
-          )
-          .range([0, widths]);
-        svgc
-          .append("g")
-          .attr("transform", "translate(0," + heights + ")")
-          .call(d3.axisBottom(x));
-
-        // Add Y axis
-        var y = d3
-          .scaleLinear()
-          .domain([
-            d3.min(chinaList, function (d) {
-              return +d.New_deaths;
-            }),
-            d3.max(chinaList, function (d) {
-              return +d.New_deaths;
-            }),
-          ])
-          .range([heights, 0]);
-        svgc.append("g").call(d3.axisLeft(y));
-
-        // This allows to find the closest X index of the mouse:
-        var bisect = d3.bisector(function (d) {
-          return d.x;
-        }).left;
-
-        // Create the circle that travels along the curve of chart
-        var focus = svgc
-          .append("g")
-          .append("circle")
-          .style("fill", "none")
-          .attr("stroke", "black")
-          .attr("r", 8.5)
-          .style("opacity", 0);
-
-        // Create the text that travels along the curve of chart
-        var focusText = svgc
-          .append("g")
-          .append("text")
-          .style("opacity", 0)
-          .attr("text-anchor", "left")
-          .attr("alignment-baseline", "middle");
-
-        // Add the line
-        svgc
-          .append("path")
-          .datum(chinaList)
-          .attr("fill", "none")
-          .attr("stroke", "steelblue")
-          .attr("stroke-width", 1.5)
-          .attr(
-            "d",
-            d3
-              .line()
-              .x(function (d) {
-                return x(new Date(d.Date_reported));
-              })
-              .y(function (d) {
-                return y(d.New_deaths);
-              })
-          );
-
-        svgc
-          .append("path")
-          .datum(chinaList)
-          .attr("fill", "none")
-          .attr("stroke", "red")
-          .attr("stroke-width", 1.5)
-          .attr(
-            "d",
-            d3
-              .line()
-              .x(function (d) {
-                return x(new Date(d.Date_reported));
-              })
-              .y(function (d) {
-                return y(d.New_cases);
-              })
-          );
-
-        // Create a rect on top of the svg area: this rectangle recovers mouse position
-        svgc
-          .append("rect")
-          .style("fill", "none")
-          .style("pointer-events", "all")
-          .attr("width", widths)
-          .attr("height", heights);
-        //   .on("mouseover", mouseover)
-        //   .on("mousemove", mousemove)
-        //   .on("mouseout", mouseout);
-
-        // What happens when the mouse move -> show the annotations at the right positions.
-        function mouseover() {
-          focus.style("opacity", 1);
-          focusText.style("opacity", 1);
-        }
-
-        function mousemove() {
-          // recover coordinate we need
-          var x0 = x.invert(e.clientX);
-          var i = bisect(chinaList, x0, 1);
-          selectedData = chinaList[i];
-          focus.attr("cx", x(selectedData.x)).attr("cy", y(selectedData.y));
-          focusText
-            .html("HELLO")
-            // .html("x:" + selectedData.x + "  -  " + "y:" + selectedData.y)
-            .attr("x", x(selectedData.x) + 15)
-            .attr("y", y(selectedData.y));
-        }
-        function mouseout() {
-          focus.style("opacity", 0);
-          focusText.style("opacity", 0);
-        }
       });
     </script>
   </body>
