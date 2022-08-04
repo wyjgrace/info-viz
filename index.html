@@ -404,7 +404,19 @@
           .text((d) => d[0]);
 
         // testing
-        var mouseG = svgLine.append("g").attr("class", "mouse-over-effects");
+        var tooltip = d3
+          .select("#linechart_covid_cases")
+          .append("div")
+          .attr("id", "tooltip")
+          .style("position", "absolute")
+          .style("background-color", "#D3D3D3")
+          .style("padding", 6)
+          .style("display", "none");
+
+        var mouseG = svgLine
+          .append("g")
+          .attr("width", width_line + 150 + margin.left + margin.right)
+          .attr("class", "mouse-over-effects");
 
         mouseG
           .append("path") // this is the black vertical line to follow mouse
@@ -451,7 +463,7 @@
 
         mouseG
           .append("svgLine:rect") // append a rect to catch mouse movements on canvas
-          .attr("width", width_line + 150 + margin.left + margin.right) // can't catch mouse events on a g element
+          .attr("width", width_line + margin.left + margin.right - 150) // can't catch mouse events on a g element
           .attr("height", height)
           .attr("fill", "none")
           .attr("pointer-events", "all")
@@ -460,16 +472,18 @@
             d3.select(".mouse-line").style("opacity", "0");
             d3.selectAll(".mouse-per-line circle").style("opacity", "0");
             d3.selectAll(".mouse-per-line text").style("opacity", "0");
+            d3.selectAll("#tooltip").style("display", "none");
           })
           .on("mouseover", function () {
             // on mouse in show line, circles and text
             d3.select(".mouse-line").style("opacity", "1");
             d3.selectAll(".mouse-per-line circle").style("opacity", "1");
             d3.selectAll(".mouse-per-line text").style("opacity", "1");
+            d3.selectAll("#tooltip").style("display", "block");
           })
           .on("mousemove", function (e) {
             // mouse moving over canvas
-            var mouse = e.clientX - margin.left - 200;
+            var mouse = e.clientX - margin.left - 7 - margin.right - 150;
             d3.select(".mouse-line").attr("d", function () {
               var d = "M" + mouse + "," + height;
               d += " " + mouse + "," + 0;
@@ -498,16 +512,139 @@
                 }
                 if (pos.x_line > mouse) end = target;
                 else if (pos.x_line < mouse) beginning = target;
-                else break; //position found
+                else {
+                  break; //position found
+                }
               }
 
               d3.select(this)
                 .select("text")
                 .text(y_line.invert(pos.y_line).toFixed(2));
 
+              tooltip
+                // .style("display", "block")
+                // .style("left", d3.event.pageX + 20)
+                // .style("top", d3.event.pageY - 20)
+                // .style("font-size", 11.5)
+                // .selectAll()
+                // .data(sumstat)
+                // .enter() // for each vehicle category, list out name and price of premium
+                // .append("div")
+                // .style("color", (d) => {
+                //   return color(d.key);
+                // })
+                // .style("font-size", 10)
+                // .html((d) => {
+                //   var xDate = xScale.invert(x.clientX);
+                //   var bisect = d3.bisector(function (d) {
+                //     return new Date(d.Date_reported);
+                //   }).left;
+                //   var idx = bisect(d.values, xDate);
+                //   return d.values[idx].New_cases.toString();
+                // });
+                .html("HELLO");
+
               return "translate(" + mouse + "," + pos.y_line + ")";
             });
           });
+
+        // set the dimensions and margins of the graph
+        const pieWidth = 720,
+          pieHeight = 450,
+          pieMargin = 40;
+
+        // The radius of the pieplot is half the width or half the height (smallest one). I subtract a bit of margin.
+        const radius = Math.min(pieWidth, pieHeight) / 2 - pieMargin;
+
+        // append the svg object to the div called 'piechart'
+        const svgPie = d3
+          .select("#china_graph")
+          .append("svg")
+          .attr("width", pieWidth)
+          .attr("height", pieHeight)
+          .append("g")
+          .attr(
+            "transform",
+            `translate(${-50 + pieWidth / 2}, ${pieHeight / 2})`
+          );
+
+        var data = [];
+        data.push(chinaList[chinaList.length - 1].Cumulative_cases);
+        data.push(chinaList[chinaList.length - 1].Cumulative_deaths);
+        // set the color scale
+        var color = d3.scaleOrdinal().domain(data).range(["red", "blue"]);
+
+        // Compute the position of each group on the pie:
+        var pie = d3.pie().value(function (d) {
+          return d;
+        });
+        var data_ready = pie(data);
+        console.log(data_ready);
+        // Build the pie chart: Basically, each part of the pie is a path that we build using the arc function.
+        svgPie
+          .selectAll("g")
+          .data(data_ready)
+          .enter()
+          .append("path")
+          .attr("d", d3.arc().innerRadius(0).outerRadius(100))
+          .attr("fill", function (d) {
+            return color(d);
+          })
+          .attr("stroke", "black")
+          .style("stroke-width", "2px")
+          .style("opacity", 0.7)
+          .on("mouseover", function (event, d) {
+            div.transition().duration(200).style("opacity", 0.9);
+            div
+              .html(d.value)
+              .style("left", event.pageX + "px")
+              .style("top", event.pageY - 28 + "px");
+            d3.select(this).style("stroke", "black").style("opacity", 1);
+          })
+          .on("mouseout", function (d) {
+            div.transition().duration(500).style("opacity", 0);
+            d3.select(this).style("stroke", "none").style("opacity", 0.8);
+          });
+
+        // data for map !
+
+        let mapData = [];
+
+        for (let i = 0; i < listOfLists.length; i++) {
+          mapData.push({
+            country: listOfLists[i][listOfLists[i].length - 1].Country,
+            Date_reported:
+              listOfLists[i][listOfLists[i].length - 1].Date_reported,
+            Cumulative_cases:
+              listOfLists[i][listOfLists[i].length - 1].Cumulative_cases,
+            Cumulative_deaths:
+              listOfLists[i][listOfLists[i].length - 1].Cumulative_deaths,
+          });
+        }
+
+        Promise.all([
+          d3.csv("https://wyjgrace.github.io/info-viz/countryList.csv"),
+        ]).then((data) => {
+          for (let i = 0; i < data[0].length; i++) {
+            // console.log(data[0][i].country);
+            for (let j = 0; j < mapData.length; j++) {
+              //   console.log(mapData[j].country);
+              if (data[0][i].country == "United Kingdom") {
+                data[0][i].country = "The United Kingdom";
+              } else if (data[0][i].country == "United States") {
+                data[0][i].country = "United States of America";
+              }
+              if (data[0][i].country == mapData[j].country) {
+                mapData[j].latitude = data[0][i].latitude;
+                mapData[j].longitude = data[0][i].longitude;
+              }
+            }
+            // console.log(mapData);
+          }
+          console.log(mapData);
+          var jsonData = JSON.stringify(mapData);
+          console.log(jsonData);
+        });
       });
     </script>
   </body>
